@@ -2,6 +2,7 @@ const bodyParser = require("body-parser");
 const express = require("express");
 const app = express();
 const MongoClient = require("mongodb").MongoClient;
+app.set("view engine", "ejs");
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
@@ -22,7 +23,7 @@ MongoClient.connect("mongodb+srv://jsk:asdfasdf@cluster0.k72gwwy.mongodb.net/?re
     resp.send("Complete");
     console.log(req.body.title);
     console.log(req.body.date);
-    db.collection("post").insertOne({ 제목: `${req.body.title}`, 날짜: `${req.body.date}` }, function (err, result) {
+    db.collection("post").insertOne({ 제목: req.body.title, 날짜: req.body.date }, function (err, result) {
       console.log("complete");
     });
   });
@@ -33,4 +34,12 @@ app.get("/", (req, resp) => {
 });
 app.get("/write", (req, resp) => {
   resp.sendFile(__dirname + "/write.html");
+});
+app.get("/list", (req, resp) => {
+  db.collection("post")
+    .find()
+    .toArray(function (err, result) {
+      console.log(result);
+      resp.render("list.ejs", { posts: result });
+    });
 });
