@@ -40,8 +40,25 @@ MongoClient.connect("mongodb+srv://jsk:asdfasdf@cluster0.k72gwwy.mongodb.net/?re
 });
 
 app.get("/", (req, resp) => {
-  resp.sendFile(__dirname + "/index.html");
+  // resp.sendFile(__dirname + "/index.ejs");
+  resp.render("index.ejs");
 });
 app.get("/write", (req, resp) => {
-  resp.sendFile(__dirname + "/write.html");
+  resp.render("write.ejs");
+});
+
+app.delete("/delete", function (req, resp) {
+  console.log(req.body);
+  req.body._id = parseInt(req.body._id);
+  db.collection("post").deleteOne(req.body, function (err, result) {
+    console.log("Delete Done");
+    resp.status(200).send({ message: "성공했습니다" });
+  });
+});
+
+app.get("/detail/:id", (req, resp) => {
+  db.collection("post").findOne({ _id: parseInt(req.params.id) }, function (err, result) {
+    console.log(result);
+    resp.render("detail.ejs", { data: result });
+  });
 });
