@@ -2,10 +2,12 @@ const bodyParser = require("body-parser");
 const express = require("express");
 const app = express();
 const MongoClient = require("mongodb").MongoClient;
-app.set("view engine", "ejs");
+const methodOverride = require("method-override");
 
+app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
+app.use(methodOverride("_method"));
 
 let db;
 MongoClient.connect("mongodb+srv://jsk:asdfasdf@cluster0.k72gwwy.mongodb.net/?retryWrites=true&w=majority", function (err, client) {
@@ -60,5 +62,21 @@ app.get("/detail/:id", (req, resp) => {
   db.collection("post").findOne({ _id: parseInt(req.params.id) }, function (err, result) {
     console.log(result);
     resp.render("detail.ejs", { data: result });
+  });
+});
+app.get("/edit/:id", (req, resp) => {
+  db.collection("post").findOne({ _id: parseInt(req.params.id) }, function (err, result) {
+    if (result != null) {
+      resp.render("edit.ejs", { data: result });
+    } else {
+      resp.render("error.ejs");
+    }
+  });
+});
+
+app.put("/edit", function (req, resp) {
+  db.collection("post").updateOne({ _id: parseInt(req.body.id) }, { $set: { 제목: req.body.title, 날짜: req.body.date } }, function (err, result) {
+    console.log("수정완료");
+    resp.redirect("/list");
   });
 });

@@ -26,8 +26,11 @@
           <h4 class="ml-2 my-3">할 일 제목: <%= posts[i].제목 %></h4>
           <p>할 일 마감 날짜: <%= posts[i].날짜 %></p>
           <button class="delete" data-id="<%= posts[i]._id %>">삭제</button>
-          <a href="http://localhost:8080/detail/<%= posts[i]._id %>">
+          <a href="/detail/<%= posts[i]._id %>">
             <button>상세페이지</button>
+          </a>
+          <a href="/edit/<%= posts[i]._id %>">
+            <button>수정하기</button>
           </a>
         </li>
         <%} %>
