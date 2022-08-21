@@ -81,21 +81,17 @@ app.put("/edit", function (req, resp) {
   });
 });
 
-// passport, session
+// passport, session, 미들웨어 세팅
 const passport = require("passport");
 const LocalStrategy = require("passport-local").Strategy;
 const session = require("express-session");
-// 미들웨어 세팅
+
 app.use(session({ secret: "비밀코드", resave: true, saveUninitialized: false }));
 app.use(passport.initialize());
 app.use(passport.session());
 
 app.get("/login", function (req, resp) {
   resp.render("login.ejs");
-});
-// 로그인 실패시 페이지 만들어지지 않았음.
-app.get("/fail", function (req, resp) {
-  resp.render("fail.ejs");
 });
 
 app.post(
@@ -108,6 +104,19 @@ app.post(
   }
 );
 
+app.get("/mypage", areULogin, function (req, resp) {
+  console.log(req.user);
+  resp.render("mypage.ejs", { user: req.user });
+});
+
+function areULogin(req, resp, next) {
+  if (req.user) {
+    next();
+  } else {
+    resp.send("have to login");
+  }
+}
+
 passport.use(
   new LocalStrategy(
     {
@@ -117,7 +126,7 @@ passport.use(
       passReqToCallback: false,
     },
     function (입력한아이디, 입력한비번, done) {
-      //console.log(입력한아이디, 입력한비번);
+      console.log(입력한아이디, 입력한비번);
       db.collection("login").findOne({ id: 입력한아이디 }, function (에러, 결과) {
         if (에러) return done(에러);
 
@@ -131,3 +140,12 @@ passport.use(
     }
   )
 );
+
+passport.serializeUser(function (user, done) {
+  done(null, user.id);
+});
+passport.deserializeUser(function (아이디, done) {
+  db.collection("login").findOne({ id: 아이디 }, function (err, result) {
+    done(null, result);
+  });
+});
