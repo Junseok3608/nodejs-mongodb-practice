@@ -3,19 +3,19 @@ const express = require("express");
 const app = express();
 const MongoClient = require("mongodb").MongoClient;
 const methodOverride = require("method-override");
-
+require("dotenv").config();
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
 
 let db;
-MongoClient.connect("mongodb+srv://jsk:asdfasdf@cluster0.k72gwwy.mongodb.net/?retryWrites=true&w=majority", function (err, client) {
+MongoClient.connect(process.env.DB_URL, function (err, client) {
   // if (err) return console.log(err);
 
   db = client.db("todoapp");
 
-  app.listen(8080, function () {
+  app.listen(process.env.PORT, function () {
     console.log("listening on 8080");
   });
   app.post("/add", (req, resp) => {
@@ -148,4 +148,14 @@ passport.deserializeUser(function (아이디, done) {
   db.collection("login").findOne({ id: 아이디 }, function (err, result) {
     done(null, result);
   });
+});
+
+app.get("/search", (req, resp) => {
+  console.log(req.query.value);
+  db.collection("post")
+    .find({ 제목: req.query.value })
+    .toArray((err, result) => {
+      resp.render("result.ejs", { data: result });
+      console.log(result);
+    });
 });
