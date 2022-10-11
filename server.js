@@ -3,6 +3,7 @@ const express = require("express");
 const app = express();
 const MongoClient = require("mongodb").MongoClient;
 const methodOverride = require("method-override");
+const { ObjectId } = require("mongodb");
 require("dotenv").config();
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -17,18 +18,6 @@ MongoClient.connect(process.env.DB_URL, function (err, client) {
 
   app.listen(process.env.PORT, function () {
     console.log("listening on 8080");
-  });
-  app.post("/add", (req, resp) => {
-    resp.send("Complete");
-    db.collection("counter").findOne({ name: "게시물갯수" }, function (err, result) {
-      let totalPostCount = result.totalPost;
-      db.collection("post").insertOne({ _id: totalPostCount + 1, 제목: req.body.title, 날짜: req.body.date }, function (err, result) {
-        console.log("complete");
-        db.collection("counter").updateOne({ name: "게시물갯수" }, { $inc: { totalPost: 1 } }, function (err, result) {
-          if (err) return console.log(err);
-        });
-      });
-    });
   });
 
   app.get("/list", (req, resp) => {
@@ -47,15 +36,6 @@ app.get("/", (req, resp) => {
 });
 app.get("/write", (req, resp) => {
   resp.render("write.ejs");
-});
-
-app.delete("/delete", function (req, resp) {
-  console.log(req.body);
-  req.body._id = parseInt(req.body._id);
-  db.collection("post").deleteOne(req.body, function (err, result) {
-    console.log("Delete Done");
-    resp.status(200).send({ message: "성공했습니다" });
-  });
 });
 
 app.get("/detail/:id", (req, resp) => {
@@ -168,5 +148,103 @@ app.get("/search", (req, resp) => {
     .toArray((err, result) => {
       resp.render("result.ejs", { data: result });
       console.log(result);
+    });
+});
+
+app.post("/register", function (req, resp) {
+  db.collection("login").insertOne({ id: req.body.id, pw: req.body.pw }, function (err, result) {
+    resp.redirect("/");
+  });
+});
+
+app.post("/add", (req, resp) => {
+  resp.send("Complete");
+  db.collection("counter").findOne({ name: "게시물갯수" }, function (err, result) {
+    let totalPostCount = result.totalPost;
+    let savefile = { _id: totalPostCount + 1, 제목: req.body.title, 날짜: req.body.date, 작성자: req.user._id };
+    db.collection("post").insertOne(savefile, function (err, result) {
+      console.log("complete");
+      db.collection("counter").updateOne({ name: "게시물갯수" }, { $inc: { totalPost: 1 } }, function (err, result) {
+        if (err) return console.log(err);
+      });
+    });
+  });
+});
+
+app.delete("/delete", function (req, resp) {
+  console.log(req.body);
+  req.body._id = parseInt(req.body._id);
+  var deletedata = { _id: req.body._id, 작성자: req.user._id };
+  db.collection("post").deleteOne(deletedata, function (err, result) {
+    console.log("Delete Done");
+    if (result) {
+      console.log(result);
+    }
+    resp.status(200).send({ message: "성공했습니다" });
+  });
+});
+
+app.use("/shop", require("./routes/shop"));
+app.use("/board", require("./routes/board"));
+
+let multer = require("multer");
+var storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "./public/image");
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.originalname);
+  },
+});
+
+var upload = multer({ storage: storage });
+
+app.get("/upload", function (req, resp) {
+  resp.render("upload.ejs");
+});
+
+app.post("/upload", upload.single("profile"), function (req, res) {
+  res.send("upload complete");
+});
+
+app.get("/image/:imagename", function (req, resp) {
+  resp.sendFile(__dirname + "/public/image/" + req.params.imagename);
+});
+
+app.post("/chatroom", areULogin, function (req, res) {
+  var savedata = {
+    title: "어떤 채팅방",
+    member: [ObjectId(req.body.당한사람id), req.user._id],
+    data: new Date(),
+  };
+
+  db.collection("chatroom")
+    .insertOne(savedata)
+    .then((result) => {
+      res.send("successsss");
+    });
+});
+
+app.get("/chat", areULogin, function (req, resp) {
+  db.collection("chatroom")
+    .find({ member: req.user._id })
+    .toArray()
+    .then((result) => {
+      resp.render("chat.ejs", { data: result });
+    });
+});
+
+app.post("/message", areULogin, function (req, resp) {
+  var chatsavedata = {
+    parent: ObjectId(req.body.parent),
+    content: req.body.content,
+    userid: req.user._id,
+    date: new Date(),
+  };
+  db.collection("message")
+    .insertOne(chatsavedata)
+    .then(() => {
+      console.log("chat successs");
+      resp.send("DB save Success");
     });
 });
