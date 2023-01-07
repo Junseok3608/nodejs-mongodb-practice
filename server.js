@@ -4,6 +4,10 @@ const app = express();
 const MongoClient = require("mongodb").MongoClient;
 const methodOverride = require("method-override");
 const { ObjectId } = require("mongodb");
+const http = require("http").createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(http);
+
 require("dotenv").config();
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -16,7 +20,7 @@ MongoClient.connect(process.env.DB_URL, function (err, client) {
 
   db = client.db("todoapp");
 
-  app.listen(process.env.PORT, function () {
+  http.listen(process.env.PORT, function () {
     console.log("listening on 8080");
   });
 
@@ -247,4 +251,47 @@ app.post("/message", areULogin, function (req, resp) {
       console.log("chat successs");
       resp.send("DB save Success");
     });
+});
+
+app.get("/message:id", areULogin, function (req, resp) {
+  resp.writeHead(200, {
+    Connection: "keep-alive",
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+  });
+
+  db.collection("message")
+    .find({ parent: req.params.id })
+    .toArray()
+    .then((result) => {
+      resp.write("event: test\n");
+      resp.write("data: " + JSON.stringify(result) + "\n\n");
+    });
+
+  const pipeline = [{ $match: { "fullDocument.parent": req.params.id } }];
+  const collection = db.collection("message");
+  const changeStream = collection.watch(pipeline);
+  changeStream.on("change", (result) => {
+    resp.write("event: test\n");
+    resp.write("data: " + JSON.stringify([result.fullDocument]) + "\n\n");
+  });
+});
+
+app.get("/socket", function (req, resp) {
+  resp.render("socket.ejs");
+});
+io.on("connection", function (socket) {
+  console.log("websocket connected");
+
+  socket.on("room1-send", function (data) {
+    io.to("room1").emit("broadcast", data);
+  });
+
+  socket.on("joinRoom", function (data) {
+    socket.join("room1");
+  });
+
+  socket.on("user-send", function (data) {
+    io.emit("broadcast", data);
+  });
 });

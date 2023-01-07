@@ -58,8 +58,20 @@
     <!-- javascript -->
     <script>
       var thischatroomid;
+      var eventSource;
       $(".list-group-item").click(function () {
         thischatroomid = this.dataset.id;
+        $(".chat-content").html("");
+        if (eventSource != undefined) {
+          eventSource.close();
+        }
+        eventSource = new EventSource("/message" + thischatroomid);
+        eventSource.addEventListener("test", function (e) {
+          var getting = JSON.parse(e.data);
+          getting.forEach(function (i) {
+            $(".chat-content").append(`<li><span class="chat-box mine">${i.content}</span></li>`);
+          });
+        });
       });
 
       $("#send").click(function () {
